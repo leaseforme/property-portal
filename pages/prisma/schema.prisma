@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  STAFF
+  TENANT
+  PROSPECTIVE_TENANT
+}
+
+model User {
+  id          String        @id @default(uuid())
+  name        String
+  email       String        @unique
+  password    String
+  role        Role
+  units       Unit[]        @relation("UnitTenant")
+  applications Application[] @relation("Applicant")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Building {
+  id          String    @id @default(uuid())
+  name        String
+  address     String
+  description String?
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  units       Unit[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Unit {
+  id          String       @id @default(uuid())
+  number      String
+  floor       Int
+  size        Int
+  price       Int
+  available   Boolean      @default(true)
+  building    Building     @relation(fields: [buildingId], references: [id])
+  buildingId  String
+  tenant      User?        @relation("UnitTenant", fields: [tenantId], references: [id])
+  tenantId    String?
+  applications Application[]
+  viewings    Viewing[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Application {
+  id          String   @id @default(uuid())
+  unit        Unit     @relation(fields: [unitId], references: [id])
+  unitId      String
+  applicant   User     @relation("Applicant", fields: [applicantId], references: [id])
+  applicantId String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Viewing {
+  id            String   @id @default(uuid())
+  unit          Unit     @relation(fields: [unitId], references: [id])
+  unitId        String
+  scheduledBy   User     @relation(fields: [scheduledById], references: [id])
+  scheduledById String
+  scheduledAt   DateTime
+  status        String   @default("SCHEDULED")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
