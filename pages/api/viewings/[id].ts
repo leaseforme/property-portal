@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
+import { sendEmail } from '@/lib/notifications';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const id = req.query.id as string;
@@ -14,10 +15,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'PUT') {
     const data = req.body;
-    const viewing = await prisma.viewing.update({
+  const viewing = await prisma.viewing.update({
       where: { id },
       data,
+      include: { unit: { include: { building: true } }, scheduledBy: true },
     });
+
+    if (data.status === 'COMPLETED') {
+      await sendEmail(
+        viewing.scheduledBy.email,
+        'Viewing Completed',
+        `<p>Your viewing for Unit ${viewing.unit.number} at ${viewing.unit.building.name} has been marked as completed.</p>`
+      );
+    }
+
     return res.status(200).json(viewing);
   }
 
